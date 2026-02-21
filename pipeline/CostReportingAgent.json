@@ -152,19 +152,24 @@
 		],
 		"parameters": {
 			"subscriptionId": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "d64a14f7-ec67-4f98-88a2-de8617d551a9"
 			},
 			"resourceGroupName": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "venkatazrg"
 			},
 			"dataFactoryName": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "venkatazdf"
 			},
 			"reportStartDate": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "2026-02-20"
 			},
 			"reportEndDate": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "2026-02-21"
 			},
 			"notificationWebhookUrl": {
 				"type": "string"
