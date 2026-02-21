@@ -1,0 +1,120 @@
+name: Deploy Azure Data Factory
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pipeline/**'
+      - 'linkedService/**'
+      - 'dataset/**'
+      - 'trigger/**'
+      - 'integrationRuntime/**'
+      - 'factory/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  FACTORY_NAME: ${{ vars.ADF_FACTORY_NAME }}
+
+jobs:
+  validate:
+    name: Validate ARM Template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate ARM template
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: factory/ARMTemplateForFactory.json
+          parameters: >
+            factoryName=${{ env.FACTORY_NAME }}
+            keyVaultBaseUrl=${{ secrets.KEY_VAULT_BASE_URL }}
+          deploymentMode: Validate
+
+  deploy:
+    name: Deploy to Azure Data Factory
+    runs-on: ubuntu-latest
+    needs: validate
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Stop ADF triggers before deployment
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az datafactory trigger list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --factory-name "${{ env.FACTORY_NAME }}" \
+              --query "[?properties.runtimeState=='Started'].name" \
+              --output tsv | \
+            while read -r trigger; do
+              echo "Stopping trigger: $trigger"
+              az datafactory trigger stop \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --factory-name "${{ env.FACTORY_NAME }}" \
+                --name "$trigger"
+            done
+
+      - name: Deploy ARM template to ADF
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: factory/ARMTemplateForFactory.json
+          parameters: >
+            factoryName=${{ env.FACTORY_NAME }}
+            keyVaultBaseUrl=${{ secrets.KEY_VAULT_BASE_URL }}
+          deploymentMode: Incremental
+
+      - name: Start ADF triggers after deployment
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az datafactory trigger list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --factory-name "${{ env.FACTORY_NAME }}" \
+              --query "[].name" \
+              --output tsv | \
+            while read -r trigger; do
+              echo "Starting trigger: $trigger"
+              az datafactory trigger start \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --factory-name "${{ env.FACTORY_NAME }}" \
+                --name "$trigger"
+            done

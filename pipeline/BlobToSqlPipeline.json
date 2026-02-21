@@ -1,0 +1,103 @@
+{
+    "name": "BlobToSqlPipeline",
+    "properties": {
+        "description": "Copy data from Azure Blob Storage to Azure SQL Database",
+        "activities": [
+            {
+                "name": "CopyBlobToSql",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": true,
+                            "wildcardFileName": "*.csv"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "writeBehavior": "upsert",
+                        "upsertSettings": {
+                            "useTempDB": true,
+                            "keys": {
+                                "value": "@pipeline().parameters.upsertKeys",
+                                "type": "Expression"
+                            }
+                        },
+                        "sqlWriterUseTableLock": false,
+                        "disableMetricsCollection": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "BlobInputDataset",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "folderPath": {
+                                "value": "@pipeline().parameters.sourceFolder",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "SqlOutputDataset",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "schemaName": {
+                                "value": "@pipeline().parameters.targetSchema",
+                                "type": "Expression"
+                            },
+                            "tableName": {
+                                "value": "@pipeline().parameters.targetTable",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            }
+        ],
+        "parameters": {
+            "sourceFolder": {
+                "type": "string",
+                "defaultValue": "data"
+            },
+            "targetSchema": {
+                "type": "string",
+                "defaultValue": "dbo"
+            },
+            "targetTable": {
+                "type": "string"
+            },
+            "upsertKeys": {
+                "type": "array",
+                "defaultValue": []
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-02-21T00:00:00Z"
+    }
+}
