@@ -1,0 +1,46 @@
+name: Sync ADF_Github_20260221 from main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pipeline/**'
+      - 'trigger/**'
+      - 'dataset/**'
+      - 'linkedService/**'
+      - 'integrationRuntime/**'
+      - 'dataflow/**'
+      - 'factory/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Merge main into ADF_Github_20260221
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into ADF_Github_20260221
+        run: |
+          git checkout ADF_Github_20260221
+          if ! git merge --no-ff origin/main \
+              -m "Sync: merge main into ADF_Github_20260221 [skip ci]"; then
+            echo "::error::Merge conflict detected between main and ADF_Github_20260221."
+            echo "::error::Resolve conflicts manually: git checkout ADF_Github_20260221 && git merge origin/main"
+            git merge --abort
+            exit 1
+          fi
+          git push origin ADF_Github_20260221
