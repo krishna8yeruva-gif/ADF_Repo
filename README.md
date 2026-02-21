@@ -17,13 +17,17 @@ The `publish_config.json` file at the root tells ADF which branch to use when pu
 
 ## Prerequisites — Authorize the AzureDataFactory GitHub OAuth App
 
-Before you can connect ADF to GitHub, you **must** authorize the **AzureDataFactory** OAuth app in GitHub to allow ADF to access your repositories.
+> **Why AzureDataFactory doesn't appear in GitHub Settings yet:**
+> The **AzureDataFactory** OAuth app is **not pre-installed**. It only appears in
+> [GitHub → Settings → Authorized OAuth Apps](https://github.com/settings/connections/applications)
+> *after* you have completed the authorization flow. The authorization is triggered
+> from inside **ADF Studio** — you cannot add it directly from GitHub Settings.
 
-1. Go to **[GitHub → Settings → Applications → Authorized OAuth Apps](https://github.com/settings/connections/applications)**.
-2. If **AzureDataFactory** is already listed, click it and verify it has access to this repository (or all repositories).
-3. If **AzureDataFactory** is **not** listed yet, it will appear for authorization the first time you attempt to link GitHub inside ADF Studio (step 5 below). GitHub will show an authorization prompt — click **Authorize AzureDataFactory** to grant access.
-
-> **Note:** Without this authorization, the ADF portal will display an error or fail to list your repositories when you try to configure GitHub integration.
+To authorize the app, follow the full setup steps below. During step 5, GitHub will
+automatically present an OAuth consent page asking you to grant **AzureDataFactory**
+access to your repositories. Once you click **Authorize AzureDataFactory** on that
+page, the app will appear in your GitHub Authorized OAuth Apps list and the
+integration will proceed.
 
 ## Setting Up GitHub Integration in Azure Data Factory
 
@@ -33,8 +37,13 @@ Follow these steps to connect this repository to your ADF instance:
 2. Click the **Manage** hub (toolbox icon) in the left navigation.
 3. Under **Source control**, select **Git configuration**.
 4. Click **Configure** and choose **GitHub** as the repository type.
-5. When prompted, sign in to GitHub. If the **AzureDataFactory** OAuth app has not been authorized yet, GitHub will ask you to **Authorize AzureDataFactory** — click **Authorize** to allow ADF to access your repositories on your behalf.
-6. Provide the following settings:
+5. ADF Studio will open a GitHub sign-in and authorization window (pop-up or redirect).
+   Sign in with your GitHub account. GitHub will then show an OAuth consent page
+   listing the permissions requested by **AzureDataFactory** — click
+   **Authorize AzureDataFactory** to grant it access to your repositories.
+   > After this step, **AzureDataFactory** will appear in
+   > [GitHub → Settings → Authorized OAuth Apps](https://github.com/settings/connections/applications).
+6. Back in ADF Studio, provide the following repository settings:
    - **GitHub Account**: `<your-github-account>` (e.g. `krishna8yeruva-gif`)
    - **Repository Name**: `<your-repository-name>` (e.g. `ADF_Repo`)
    - **Collaboration branch**: `main`
