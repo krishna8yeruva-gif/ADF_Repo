@@ -1,0 +1,31 @@
+{
+    "name": "SqlOutputDataset",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "AzureSqlDatabase",
+            "type": "LinkedServiceReference"
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [],
+        "typeProperties": {
+            "schema": {
+                "value": "@dataset().schemaName",
+                "type": "Expression"
+            },
+            "table": {
+                "value": "@dataset().tableName",
+                "type": "Expression"
+            }
+        },
+        "parameters": {
+            "schemaName": {
+                "type": "string",
+                "defaultValue": "dbo"
+            },
+            "tableName": {
+                "type": "string"
+            }
+        }
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "name": "DailyTrigger",
+    "properties": {
+        "description": "Daily trigger to run the BlobToSqlPipeline",
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "BlobToSqlPipeline",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "sourceFolder": "data",
+                    "targetSchema": "dbo",
+                    "targetTable": "TargetTable",
+                    "upsertKeys": []
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Day",
+                "interval": 1,
+                "startTime": "2026-01-01T00:00:00",
+                "timeZone": "UTC",
+                "schedule": {
+                    "hours": [0],
+                    "minutes": [0]
+                }
+            }
+        }
+    }
+}
