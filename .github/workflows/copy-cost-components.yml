@@ -1,0 +1,69 @@
+name: Copy Cost Report components to ADF_Github_20260221
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: 'Branch to copy files FROM'
+        required: true
+        default: 'copilot/start-github-azure-integration'
+      target_branch:
+        description: 'Branch to copy files INTO'
+        required: true
+        default: 'ADF_Github_20260221'
+
+permissions:
+  contents: write
+
+jobs:
+  copy:
+    name: Copy CostReportingAgent and CostReportDailyTrigger
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Switch to target branch
+        run: git checkout -B ${{ github.event.inputs.target_branch }} origin/${{ github.event.inputs.target_branch }}
+
+      - name: Copy pipeline/CostReportingAgent.json from source branch
+        run: |
+          git checkout origin/${{ github.event.inputs.source_branch }} \
+            -- pipeline/CostReportingAgent.json
+
+      - name: Copy trigger/CostReportDailyTrigger.json from source branch
+        run: |
+          git checkout origin/${{ github.event.inputs.source_branch }} \
+            -- trigger/CostReportDailyTrigger.json
+
+      - name: Verify files
+        run: |
+          echo "=== pipeline/CostReportingAgent.json ==="
+          cat pipeline/CostReportingAgent.json | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); \
+             print('Pipeline:', d['name']); \
+             print('Activities:', [a['name'] for a in d['properties']['activities']])"
+          echo "=== trigger/CostReportDailyTrigger.json ==="
+          cat trigger/CostReportDailyTrigger.json | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); \
+             print('Trigger:', d['name']); \
+             print('Type:', d['properties']['type'])"
+
+      - name: Commit and push to target branch
+        run: |
+          git add pipeline/CostReportingAgent.json trigger/CostReportDailyTrigger.json
+          if git diff --cached --quiet; then
+            echo "Files are already identical on ${{ github.event.inputs.target_branch }} — nothing to commit."
+          else
+            git commit -m "Copy CostReportingAgent pipeline and CostReportDailyTrigger to ${{ github.event.inputs.target_branch }}"
+            git push origin ${{ github.event.inputs.target_branch }}
+            echo "✅ Successfully pushed to ${{ github.event.inputs.target_branch }}"
+          fi
