@@ -1,17 +1,32 @@
 # ADF_Repo
 
-This repository is configured for GitHub integration with **Azure Data Factory (ADF)**.
+Azure Data Factory integration repository. This repo stores ADF pipeline definitions, linked services, datasets, triggers, and infrastructure as code managed through Git integration.
 
 ## Repository Structure
 
-| Folder | Description |
-|---|---|
-| `pipeline/` | ADF pipeline definitions (JSON) |
-| `dataset/` | ADF dataset definitions (JSON) |
-| `linkedService/` | ADF linked service definitions (JSON) |
-| `trigger/` | ADF trigger definitions (JSON) |
-| `dataflow/` | ADF data flow definitions (JSON) |
-| `integrationRuntime/` | ADF integration runtime definitions (JSON) |
+```
+ADF_Repo/
+├── pipeline/                        # ADF pipeline definitions
+│   ├── pl_asql_asql_load.json       # Copies CSV files from Blob Storage to SQL Database
+│   └── CostReportingAgent.json      # Queries ADF Monitor & Cost Management APIs for cost reports
+├── linkedService/                   # Connection definitions
+│   ├── AzureBlobStorage.json        # Azure Blob Storage connection (via Key Vault secret)
+│   ├── AzureKeyVault.json           # Azure Key Vault connection
+│   └── AzureSqlDatabase.json        # Azure SQL Database connection (via Key Vault secret)
+├── dataset/                         # Dataset definitions
+│   ├── BlobInputDataset.json        # Parameterised CSV input from Blob Storage
+│   └── SqlOutputDataset.json        # Parameterised SQL table output
+├── trigger/                         # Trigger definitions
+│   ├── DailyTrigger.json            # Daily schedule trigger (midnight UTC)
+│   └── CostReportDailyTrigger.json  # Daily trigger for the Cost Reporting Agent
+├── integrationRuntime/              # Integration runtime definitions
+├── dataflow/                        # Data flow definitions
+├── factory/                         # ARM templates for ADF infrastructure
+│   ├── ARMTemplateForFactory.json            # Full ARM template
+│   └── ARMTemplateParametersForFactory.json  # ARM template parameters
+└── .github/workflows/
+    └── deploy-adf.yml               # CI/CD workflow for ADF deployment
+```
 
 The `publish_config.json` file at the root tells ADF which branch to use when publishing ARM templates (defaults to `adf_publish`).
 
@@ -23,35 +38,79 @@ The `publish_config.json` file at the root tells ADF which branch to use when pu
 > *after* you have completed the authorization flow. The authorization is triggered
 > from inside **ADF Studio** — you cannot add it directly from GitHub Settings.
 
-To authorize the app, follow the full setup steps below. During step 5, GitHub will
+To authorize the app, follow the setup steps in the next section. During step 4, GitHub will
 automatically present an OAuth consent page asking you to grant **AzureDataFactory**
 access to your repositories. Once you click **Authorize AzureDataFactory** on that
 page, the app will appear in your GitHub Authorized OAuth Apps list and the
 integration will proceed.
 
-## Setting Up GitHub Integration in Azure Data Factory
+## Getting Started
 
-Follow these steps to connect this repository to your ADF instance:
+### Azure Prerequisites
 
-1. Open [Azure Data Factory Studio](https://adf.azure.com) and select your factory.
-2. Click the **Manage** hub (toolbox icon) in the left navigation.
-3. Under **Source control**, select **Git configuration**.
-4. Click **Configure** and choose **GitHub** as the repository type.
-5. ADF Studio will open a GitHub sign-in and authorization window (pop-up or redirect).
-   Sign in with your GitHub account. GitHub will then show an OAuth consent page
-   listing the permissions requested by **AzureDataFactory** — click
-   **Authorize AzureDataFactory** to grant it access to your repositories.
+- An Azure subscription
+- An Azure Resource Group
+- An Azure Key Vault with the following secrets:
+  - `AzureBlobStorageConnectionString` – connection string for the Blob Storage account
+  - `AzureSqlConnectionString` – connection string for the Azure SQL Database
+
+### Connecting ADF to this Repository
+
+1. Open your Azure Data Factory instance in the Azure portal.
+2. Navigate to **Manage → Git configuration**.
+3. Select **GitHub** as the repository type and click **Configure**.
+4. When prompted, sign in to GitHub. GitHub will show an OAuth consent page for
+   **AzureDataFactory** — click **Authorize AzureDataFactory** to grant access.
    > After this step, **AzureDataFactory** will appear in
    > [GitHub → Settings → Authorized OAuth Apps](https://github.com/settings/connections/applications).
-6. Back in ADF Studio, provide the following repository settings:
-   - **GitHub Account**: `<your-github-account>` (e.g. `krishna8yeruva-gif`)
-   - **Repository Name**: `<your-repository-name>` (e.g. `ADF_Repo`)
+5. Provide the following settings:
+   - **Repository name**: `ADF_Repo`
    - **Collaboration branch**: `main`
-   - **Publish branch**: `adf_publish` (matches `publish_config.json`)
    - **Root folder**: `/`
-7. Click **Apply**.
+6. Click **Apply**.
 
-After connecting, ADF will read/write pipeline and resource definitions as JSON files into the folders above. When you click **Publish** in ADF Studio, ARM templates will be committed to the `adf_publish` branch automatically.
+### Deploying via GitHub Actions
+
+The workflow in `.github/workflows/deploy-adf.yml` deploys changes to ADF automatically on every push to `main` that modifies ADF artefacts. It can also be triggered manually.
+
+#### Required GitHub Secrets
+
+| Secret | Description |
+|---|---|
+| `AZURE_CLIENT_ID` | Client ID of the Azure service principal (federated credential) |
+| `AZURE_TENANT_ID` | Azure Active Directory tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| `KEY_VAULT_BASE_URL` | Base URL of the Azure Key Vault (e.g. `https://my-kv.vault.azure.net/`) |
+
+#### Required GitHub Variables
+
+| Variable | Description |
+|---|---|
+| `AZURE_RESOURCE_GROUP` | Name of the Azure Resource Group |
+| `ADF_FACTORY_NAME` | Name of the Azure Data Factory instance |
+
+### Deploying Manually with Azure CLI
+
+```bash
+az deployment group create \
+  --resource-group <your-resource-group> \
+  --template-file factory/ARMTemplateForFactory.json \
+  --parameters factoryName=<your-adf-name> \
+               keyVaultBaseUrl=https://<your-keyvault-name>.vault.azure.net/
+```
+
+## Pipeline Overview
+
+### pl_asql_asql_load
+
+Copies delimited (CSV) files from Azure Blob Storage into an Azure SQL Database table using an upsert strategy.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `sourceFolder` | string | `data` | Blob container folder to read from |
+| `targetSchema` | string | `dbo` | SQL schema name |
+| `targetTable` | string | *(required)* | Destination SQL table name |
+| `upsertKeys` | array | `[]` | Column names used as upsert keys |
 
 ## Cost Reporting Agent
 
@@ -133,7 +192,7 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
   "pipelineRuns": {
     "value": [
       {
-        "pipelineName": "IngestSalesData",
+        "pipelineName": "pl_asql_asql_load",
         "runId": "...",
         "status": "Succeeded",
         "durationInMs": 43210,
@@ -157,7 +216,3 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
 }
 ```
 
-## CI/CD Notes
-
-- Only the **development** ADF instance should be linked directly to this Git repository.
-- Use the ARM templates from the `adf_publish` branch to deploy to **test** and **production** environments via your CI/CD pipeline (e.g., GitHub Actions or Azure DevOps).
