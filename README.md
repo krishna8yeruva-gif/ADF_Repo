@@ -6,26 +6,26 @@ Azure Data Factory integration repository. This repo stores ADF pipeline definit
 
 ```
 ADF_Repo/
-├── pipeline/                        # ADF pipeline definitions
-│   ├── pl_asql_asql_load.json       # Copies CSV files from Blob Storage to SQL Database
-│   └── CostReportingAgent.json      # Queries ADF Monitor & Cost Management APIs for cost reports
-├── linkedService/                   # Connection definitions
-│   ├── AzureBlobStorage.json        # Azure Blob Storage connection (via Key Vault secret)
-│   ├── AzureKeyVault.json           # Azure Key Vault connection
-│   └── AzureSqlDatabase.json        # Azure SQL Database connection (via Key Vault secret)
-├── dataset/                         # Dataset definitions
-│   ├── BlobInputDataset.json        # Parameterised CSV input from Blob Storage
-│   └── SqlOutputDataset.json        # Parameterised SQL table output
-├── trigger/                         # Trigger definitions
-│   ├── DailyTrigger.json            # Daily schedule trigger (midnight UTC)
-│   └── CostReportDailyTrigger.json  # Daily trigger for the Cost Reporting Agent
-├── integrationRuntime/              # Integration runtime definitions
-├── dataflow/                        # Data flow definitions
-├── factory/                         # ARM templates for ADF infrastructure
+├── pipeline/                  # ADF pipeline definitions
+│   ├── BlobToSqlPipeline.json # Copies CSV files from Blob Storage to SQL Database
+│   └── CostReportingAgent.json # Queries ADF Monitor & Cost Management APIs for cost reports
+├── linkedService/             # Connection definitions
+│   ├── AzureBlobStorage.json  # Azure Blob Storage connection (via Key Vault secret)
+│   ├── AzureKeyVault.json     # Azure Key Vault connection
+│   └── AzureSqlDatabase.json  # Azure SQL Database connection (via Key Vault secret)
+├── dataset/                   # Dataset definitions
+│   ├── BlobInputDataset.json  # Parameterised CSV input from Blob Storage
+│   └── SqlOutputDataset.json  # Parameterised SQL table output
+├── trigger/                   # Trigger definitions
+│   ├── DailyTrigger.json      # Daily schedule trigger (midnight UTC)
+│   └── CostReportDailyTrigger.json # Daily trigger for the Cost Reporting Agent
+├── integrationRuntime/        # Integration runtime definitions
+├── dataflow/                  # Data flow definitions
+├── factory/                   # ARM templates for ADF infrastructure
 │   ├── ARMTemplateForFactory.json            # Full ARM template
 │   └── ARMTemplateParametersForFactory.json  # ARM template parameters
 └── .github/workflows/
-    └── deploy-adf.yml               # CI/CD workflow for ADF deployment
+    └── deploy-adf.yml         # CI/CD workflow for ADF deployment
 ```
 
 ## Getting Started
@@ -78,7 +78,7 @@ az deployment group create \
 
 ## Pipeline Overview
 
-### pl_asql_asql_load
+### BlobToSqlPipeline
 
 Copies delimited (CSV) files from Azure Blob Storage into an Azure SQL Database table using an upsert strategy.
 
@@ -162,6 +162,8 @@ on the previous day.
 ### Webhook payload shape
 
 When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
+
+```json
 {
   "reportGeneratedAt": "2024-01-02T00:00:05Z",
   "reportPeriod": {
@@ -172,7 +174,7 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
   "pipelineRuns": {
     "value": [
       {
-        "pipelineName": "pl_asql_asql_load",
+        "pipelineName": "BlobToSqlPipeline",
         "runId": "...",
         "status": "Succeeded",
         "durationInMs": 43210,
@@ -195,5 +197,4 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
   }
 }
 ```
-
 
