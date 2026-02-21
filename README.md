@@ -25,6 +25,41 @@ ADF_Repo/
     └── deploy-adf.yml         # CI/CD workflow for ADF deployment
 ```
 
+## Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | Collaboration branch — ADF Studio authors pipelines here; source of truth for `venkatazdf` |
+| `adf_publish` | Auto-generated publish branch — ADF Studio writes ARM templates here on every **Publish** |
+| `ADF_Github_20260221` | Snapshot of `main` as of 2026-02-21; used for point-in-time reference / environment promotion |
+
+### Creating `ADF_Github_20260221` from `main`
+
+This branch is a copy of `main` as it stood on 2026-02-21. Use any of the following methods:
+
+**Option 1 — GitHub UI (easiest)**
+1. Go to [github.com/krishna8yeruva-gif/ADF_Repo](https://github.com/krishna8yeruva-gif/ADF_Repo)
+2. Click the **branch selector** (`main ▾`) at the top-left of the file list
+3. Type `ADF_Github_20260221` in the search box
+4. Click **Create branch: ADF_Github_20260221 from 'main'**
+
+**Option 2 — GitHub CLI**
+```bash
+gh api repos/krishna8yeruva-gif/ADF_Repo/git/refs \
+  --method POST \
+  --field ref="refs/heads/ADF_Github_20260221" \
+  --field sha="$(gh api repos/krishna8yeruva-gif/ADF_Repo/git/ref/heads/main --jq '.object.sha')"
+```
+
+**Option 3 — Git command line**
+```bash
+git fetch origin main
+git checkout -b ADF_Github_20260221 origin/main
+git push origin ADF_Github_20260221
+```
+
+---
+
 ## Getting Started
 
 ### Prerequisites
