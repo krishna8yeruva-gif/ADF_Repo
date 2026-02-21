@@ -1,7 +1,7 @@
 {
   "name": "CostReportingAgent",
   "properties": {
-    "description": "Queries the ADF Monitor API for pipeline run statistics and the Azure Cost Management API for ADF spend, then assembles a per-pipeline cost report and delivers it to a configurable webhook URL. Runs under the Data Factory Managed Identity — no secrets required.",
+    "description": "Queries the ADF Monitor API for pipeline run statistics and the Azure Cost Management API for ADF spend, then assembles a per-pipeline cost report and delivers it to a configurable webhook URL. Runs under the Data Factory Managed Identity. PREREQUISITE: assign the 'Reader' role (NOT 'Monitoring Reader') to the Managed Identity at the Data Factory resource scope, and 'Cost Management Reader' at the subscription scope. Without 'Reader' on the factory, the QueryPipelineRuns activity will fail with AuthorizationFailed: Microsoft.DataFactory/factories/querypipelineruns/read.",
     "activities": [
       {
         "name": "QueryPipelineRuns",

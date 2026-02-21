@@ -162,14 +162,49 @@ Assign these roles to the Data Factory **Managed Identity** before running the p
 
 | Role | Scope | Reason |
 |---|---|---|
-| **Monitoring Reader** | Data Factory resource | Read pipeline run history via ADF Monitor API |
-| **Cost Management Reader** | Subscription | Read cost data via Azure Cost Management API |
+| **Reader** | Data Factory resource | Required for `Microsoft.DataFactory/factories/querypipelineruns/read` — reads pipeline run history via the ADF Monitor API |
+| **Cost Management Reader** | Subscription | Required for `Microsoft.CostManagement/query/action` — reads Azure cost data |
 
-To assign roles in the Azure Portal:
-1. Open the Data Factory → **Managed identity** — note the Object (principal) ID.
-2. Go to **Subscriptions** → your subscription → **Access control (IAM)** →
-   **Add role assignment** → select **Cost Management Reader** → assign to the Managed Identity.
-3. Repeat at the Data Factory resource level for **Monitoring Reader**.
+> ⚠️ **Common error:** If you see `AuthorizationFailed` with action
+> `Microsoft.DataFactory/factories/querypipelineruns/read`, it means the
+> Managed Identity has not been assigned the **Reader** role on the factory.
+> The **Monitoring Reader** built-in role does **not** grant this permission —
+> use the generic **Reader** role at the Data Factory resource scope instead.
+
+#### Azure Portal steps
+
+1. Open the Data Factory → **Properties → Managed identity** — note the Object (principal) ID.
+2. Go to the **Data Factory resource** → **Access control (IAM)** → **Add role assignment**
+   → select **Reader** → assign to the Managed Identity.
+3. Go to **Subscriptions** → your subscription → **Access control (IAM)** → **Add role assignment**
+   → select **Cost Management Reader** → assign to the Managed Identity.
+
+#### Azure CLI (quickest fix)
+
+```bash
+# Replace the values below with your own subscription, resource group, factory name,
+# and the Managed Identity's Object ID (shown in Factory → Settings → Managed identity)
+SUBSCRIPTION_ID="<your-subscription-id>"
+RESOURCE_GROUP="<your-resource-group>"
+FACTORY_NAME="<your-factory-name>"
+MSI_OBJECT_ID="<managed-identity-object-id>"
+
+FACTORY_SCOPE="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.DataFactory/factories/${FACTORY_NAME}"
+
+# 1. Reader on the factory scope (fixes querypipelineruns/read)
+az role assignment create \
+  --assignee-object-id "${MSI_OBJECT_ID}" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Reader" \
+  --scope "${FACTORY_SCOPE}"
+
+# 2. Cost Management Reader on the subscription scope
+az role assignment create \
+  --assignee-object-id "${MSI_OBJECT_ID}" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Cost Management Reader" \
+  --scope "/subscriptions/${SUBSCRIPTION_ID}"
+```
 
 ### Running the agent manually
 
