@@ -171,7 +171,65 @@ Assign these roles to the Data Factory **Managed Identity** before running the p
 > The **Monitoring Reader** built-in role does **not** grant this permission —
 > use the generic **Reader** role at the Data Factory resource scope instead.
 
-#### Azure Portal steps
+#### Why "Add role assignment" is greyed out
+
+The **Add role assignment** button in **Access control (IAM)** is greyed out when the
+**account you are signed into the Azure Portal with** does not have
+`Microsoft.Authorization/roleAssignments/write` — which is only granted by:
+
+| Role on the resource | Can grant roles? |
+|---|---|
+| **Owner** | ✅ Yes |
+| **User Access Administrator** | ✅ Yes |
+| Contributor | ❌ No |
+| Reader | ❌ No |
+
+> This is a separate permission from what the ADF Managed Identity needs.
+> You (the human user) need Owner/User Access Administrator to *grant* roles;
+> the Managed Identity needs Reader to *read* pipeline runs.
+
+##### Step 1 — Check your current role on `venkatazdf`
+
+1. In the Azure Portal, open **venkatazdf** → **Access control (IAM)** → **View my access** tab.
+2. If your role is **Contributor** or **Reader**, you cannot click "Add role assignment".
+
+##### Step 2 — Get Owner or User Access Administrator
+
+You need someone with **Owner** on either:
+- The `venkatazdf` Data Factory resource, **or**
+- The `venkatazrg` Resource Group, **or**
+- The subscription `d64a14f7-ec67-4f98-88a2-de8617d551a9`
+
+to assign **Owner** or **User Access Administrator** to your account. Ask your Azure subscription admin to run:
+
+```bash
+# Grant yourself User Access Administrator on the factory
+# (replace YOUR_USER_OBJECT_ID with your own Azure AD object ID)
+az role assignment create \
+  --assignee-object-id "<YOUR_USER_OBJECT_ID>" \
+  --assignee-principal-type User \
+  --role "User Access Administrator" \
+  --scope "/subscriptions/d64a14f7-ec67-4f98-88a2-de8617d551a9/resourceGroups/venkatazrg/providers/Microsoft.DataFactory/factories/venkatazdf"
+```
+
+> To find your own Object ID: **Azure Portal → Microsoft Entra ID → Users →**
+> search your name → copy the **Object ID**.
+
+##### Step 3 — Assign roles to the Managed Identity (once you have access)
+
+Once the "Add role assignment" button is active:
+
+**On `venkatazdf` (Data Factory scope):**
+1. Open `venkatazdf` → **Access control (IAM)** → **Add role assignment**
+2. Search for and select **Reader** → click **Next**
+3. Click **+ Select members** → search for `venkatazdf` → select the Managed Identity → **Review + assign**
+
+**On your subscription (Subscription scope):**
+1. Go to **Subscriptions** → `d64a14f7-ec67-4f98-88a2-de8617d551a9` → **Access control (IAM)** → **Add role assignment**
+2. Search for and select **Cost Management Reader** → click **Next**
+3. Click **+ Select members** → search for `venkatazdf` → select the Managed Identity → **Review + assign**
+
+#### Azure Portal steps (original — once button is enabled)
 
 1. Open the Data Factory → **Properties → Managed identity** — note the Object (principal) ID.
 2. Go to the **Data Factory resource** → **Access control (IAM)** → **Add role assignment**
