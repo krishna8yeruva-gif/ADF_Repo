@@ -1,0 +1,44 @@
+{
+  "name": "CostReportDailyTrigger",
+  "properties": {
+    "description": "Runs the CostReportingAgent pipeline every day at midnight UTC. Reports on the previous day's pipeline activity and Azure spend. Update the parameter placeholders before starting this trigger.",
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2024-01-01T00:00:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "hours": [0],
+          "minutes": [0]
+        }
+      }
+    },
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "CostReportingAgent",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "subscriptionId": "<your-subscription-id>",
+          "resourceGroupName": "<your-resource-group>",
+          "dataFactoryName": "<your-data-factory-name>",
+          "reportStartDate": {
+            "value": "@formatDateTime(addDays(trigger().scheduledTime, -1), 'yyyy-MM-ddTHH:mm:ssZ')",
+            "type": "Expression"
+          },
+          "reportEndDate": {
+            "value": "@formatDateTime(trigger().scheduledTime, 'yyyy-MM-ddTHH:mm:ssZ')",
+            "type": "Expression"
+          },
+          "notificationWebhookUrl": "<your-webhook-url>"
+        }
+      }
+    ],
+    "annotations": [
+      "CostReporting"
+    ]
+  }
+}
