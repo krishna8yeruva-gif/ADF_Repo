@@ -28,25 +28,9 @@ ADF_Repo/
     └── deploy-adf.yml               # CI/CD workflow for ADF deployment
 ```
 
-The `publish_config.json` file at the root tells ADF which branch to use when publishing ARM templates (defaults to `adf_publish`).
-
-## Prerequisites — Authorize the AzureDataFactory GitHub OAuth App
-
-> **Why AzureDataFactory doesn't appear in GitHub Settings yet:**
-> The **AzureDataFactory** OAuth app is **not pre-installed**. It only appears in
-> [GitHub → Settings → Authorized OAuth Apps](https://github.com/settings/connections/applications)
-> *after* you have completed the authorization flow. The authorization is triggered
-> from inside **ADF Studio** — you cannot add it directly from GitHub Settings.
-
-To authorize the app, follow the setup steps in the next section. During step 4, GitHub will
-automatically present an OAuth consent page asking you to grant **AzureDataFactory**
-access to your repositories. Once you click **Authorize AzureDataFactory** on that
-page, the app will appear in your GitHub Authorized OAuth Apps list and the
-integration will proceed.
-
 ## Getting Started
 
-### Azure Prerequisites
+### Prerequisites
 
 - An Azure subscription
 - An Azure Resource Group
@@ -58,16 +42,9 @@ integration will proceed.
 
 1. Open your Azure Data Factory instance in the Azure portal.
 2. Navigate to **Manage → Git configuration**.
-3. Select **GitHub** as the repository type and click **Configure**.
-4. When prompted, sign in to GitHub. GitHub will show an OAuth consent page for
-   **AzureDataFactory** — click **Authorize AzureDataFactory** to grant access.
-   > After this step, **AzureDataFactory** will appear in
-   > [GitHub → Settings → Authorized OAuth Apps](https://github.com/settings/connections/applications).
-5. Provide the following settings:
-   - **Repository name**: `ADF_Repo`
-   - **Collaboration branch**: `main`
-   - **Root folder**: `/`
-6. Click **Apply**.
+3. Select **GitHub** as the repository type and connect with your credentials.
+4. Set the **Repository name** to `ADF_Repo`, the **Collaboration branch** to `main`, and the **Root folder** to `/`.
+5. Click **Apply**.
 
 ### Deploying via GitHub Actions
 
@@ -111,6 +88,11 @@ Copies delimited (CSV) files from Azure Blob Storage into an Azure SQL Database 
 | `targetSchema` | string | `dbo` | SQL schema name |
 | `targetTable` | string | *(required)* | Destination SQL table name |
 | `upsertKeys` | array | `[]` | Column names used as upsert keys |
+
+### CostReportingAgent
+
+Queries the ADF Monitor API and Azure Cost Management API to produce a per-pipeline cost report.
+See the [Cost Reporting Agent](#cost-reporting-agent) section below for full details.
 
 ## Cost Reporting Agent
 
@@ -180,8 +162,6 @@ on the previous day.
 ### Webhook payload shape
 
 When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
-
-```json
 {
   "reportGeneratedAt": "2024-01-02T00:00:05Z",
   "reportPeriod": {
@@ -215,4 +195,5 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
   }
 }
 ```
+
 
