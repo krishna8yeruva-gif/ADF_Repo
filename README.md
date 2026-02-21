@@ -7,8 +7,7 @@ Azure Data Factory integration repository. This repo stores ADF pipeline definit
 ```
 ADF_Repo/
 ├── pipeline/                  # ADF pipeline definitions
-│   ├── BlobToSqlPipeline.json # Copies CSV files from Blob Storage to SQL Database
-│   └── CostReportingAgent.json # Queries ADF Monitor & Cost Management APIs for cost reports
+│   └── BlobToSqlPipeline.json # Copies CSV files from Blob Storage to SQL Database
 ├── linkedService/             # Connection definitions
 │   ├── AzureBlobStorage.json  # Azure Blob Storage connection (via Key Vault secret)
 │   ├── AzureKeyVault.json     # Azure Key Vault connection
@@ -17,10 +16,8 @@ ADF_Repo/
 │   ├── BlobInputDataset.json  # Parameterised CSV input from Blob Storage
 │   └── SqlOutputDataset.json  # Parameterised SQL table output
 ├── trigger/                   # Trigger definitions
-│   ├── DailyTrigger.json      # Daily schedule trigger (midnight UTC)
-│   └── CostReportDailyTrigger.json # Daily trigger for the Cost Reporting Agent
+│   └── DailyTrigger.json      # Daily schedule trigger (midnight UTC)
 ├── integrationRuntime/        # Integration runtime definitions
-├── dataflow/                  # Data flow definitions
 ├── factory/                   # ARM templates for ADF infrastructure
 │   ├── ARMTemplateForFactory.json            # Full ARM template
 │   └── ARMTemplateParametersForFactory.json  # ARM template parameters
@@ -89,15 +86,10 @@ Copies delimited (CSV) files from Azure Blob Storage into an Azure SQL Database 
 | `targetTable` | string | *(required)* | Destination SQL table name |
 | `upsertKeys` | array | `[]` | Column names used as upsert keys |
 
-### CostReportingAgent
-
-Queries the ADF Monitor API and Azure Cost Management API to produce a per-pipeline cost report.
-See the [Cost Reporting Agent](#cost-reporting-agent) section below for full details.
-
 ## Cost Reporting Agent
 
-The `CostReportingAgent` pipeline queries two Azure REST APIs and assembles a
-combined cost report for every ADF pipeline in your factory.
+The `CostReportingAgent` pipeline queries the ADF Monitor API and Azure Cost Management
+API to produce a per-pipeline cost and usage report for your factory.
 
 ### How it works
 
@@ -110,6 +102,13 @@ combined cost report for every ADF pipeline in your factory.
 
 Authentication uses the Data Factory **Managed Identity** — no secrets or keys
 are stored in the pipeline or this repository.
+
+### Files added by this feature
+
+| File | Description |
+|---|---|
+| `pipeline/CostReportingAgent.json` | Four-activity ADF pipeline definition |
+| `trigger/CostReportDailyTrigger.json` | Daily schedule trigger (00:00 UTC, previous day window) |
 
 ### Pipeline parameters
 
@@ -134,8 +133,7 @@ Assign these roles to the Data Factory **Managed Identity** before running the p
 To assign roles in the Azure Portal:
 1. Open the Data Factory → **Managed identity** — note the Object (principal) ID.
 2. Go to **Subscriptions** → your subscription → **Access control (IAM)** →
-   **Add role assignment** → select **Cost Management Reader** → assign to the
-   Managed Identity.
+   **Add role assignment** → select **Cost Management Reader** → assign to the Managed Identity.
 3. Repeat at the Data Factory resource level for **Monitoring Reader**.
 
 ### Running the agent manually
@@ -197,4 +195,3 @@ When `notificationWebhookUrl` is set, the pipeline POSTs a JSON body like this:
   }
 }
 ```
-
