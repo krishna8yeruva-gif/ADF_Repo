@@ -1,5 +1,5 @@
 {
-	"name": "BlobToSqlPipeline",
+	"name": "pl_asql_asql_load",
 	"properties": {
 		"description": "Copy data from Azure Blob Storage to Azure SQL Database",
 		"activities": [
