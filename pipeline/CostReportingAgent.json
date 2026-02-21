@@ -1,0 +1,184 @@
+{
+	"name": "CostReportingAgent",
+	"properties": {
+		"description": "Queries the ADF Monitor API for pipeline run statistics and the Azure Cost Management API for ADF spend, then assembles a per-pipeline cost report and delivers it to a configurable webhook URL. Runs under the Data Factory Managed Identity — no secrets required.",
+		"activities": [
+			{
+				"name": "QueryPipelineRuns",
+				"description": "Calls the ADF Monitor REST API to retrieve all pipeline runs that were last updated within the requested date range.",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": {
+						"value": "@concat('https://management.azure.com/subscriptions/', pipeline().parameters.subscriptionId, '/resourceGroups/', pipeline().parameters.resourceGroupName, '/providers/Microsoft.DataFactory/factories/', pipeline().parameters.dataFactoryName, '/queryPipelineRuns?api-version=2018-06-01')",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "@concat('{\"lastUpdatedAfter\":\"', pipeline().parameters.reportStartDate, '\",\"lastUpdatedBefore\":\"', pipeline().parameters.reportEndDate, '\",\"filters\":[]}')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://management.azure.com/"
+					}
+				}
+			},
+			{
+				"name": "QueryCostManagement",
+				"description": "Calls the Azure Cost Management query API to retrieve actual ADF costs for the period, grouped by resource and meter category.",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "QueryPipelineRuns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": {
+						"value": "@concat('https://management.azure.com/subscriptions/', pipeline().parameters.subscriptionId, '/providers/Microsoft.CostManagement/query?api-version=2023-11-01')",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "@concat('{\"type\":\"ActualCost\",\"timeframe\":\"Custom\",\"timePeriod\":{\"from\":\"', pipeline().parameters.reportStartDate, '\",\"to\":\"', pipeline().parameters.reportEndDate, '\"},\"dataset\":{\"granularity\":\"None\",\"aggregation\":{\"totalCost\":{\"name\":\"Cost\",\"function\":\"Sum\"}},\"grouping\":[{\"type\":\"Dimension\",\"name\":\"ResourceId\"},{\"type\":\"Dimension\",\"name\":\"MeterCategory\"}],\"filter\":{\"dimensions\":{\"name\":\"ServiceName\",\"operator\":\"In\",\"values\":[\"Azure Data Factory v2\"]}}}}')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://management.azure.com/"
+					}
+				}
+			},
+			{
+				"name": "SetCostReport",
+				"description": "Assembles the pipeline run results and cost data into a single JSON report object stored in the costReportJson variable.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "QueryCostManagement",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "costReportJson",
+					"value": {
+						"value": "@concat('{\"reportGeneratedAt\":\"', utcNow(), '\",\"reportPeriod\":{\"start\":\"', pipeline().parameters.reportStartDate, '\",\"end\":\"', pipeline().parameters.reportEndDate, '\"},\"factory\":\"', pipeline().parameters.dataFactoryName, '\",\"pipelineRuns\":', string(activity('QueryPipelineRuns').output), ',\"costData\":', string(activity('QueryCostManagement').output), '}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IfWebhookConfigured",
+				"description": "Delivers the cost report to the notification webhook only when a URL has been provided.",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "SetCostReport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(empty(pipeline().parameters.notificationWebhookUrl))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "SendCostReport",
+							"description": "POSTs the assembled cost report JSON to the configured notification webhook URL.",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:05:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": {
+									"value": "@pipeline().parameters.notificationWebhookUrl",
+									"type": "Expression"
+								},
+								"body": {
+									"value": "@variables('costReportJson')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"subscriptionId": {
+				"type": "string"
+			},
+			"resourceGroupName": {
+				"type": "string"
+			},
+			"dataFactoryName": {
+				"type": "string"
+			},
+			"reportStartDate": {
+				"type": "string"
+			},
+			"reportEndDate": {
+				"type": "string"
+			},
+			"notificationWebhookUrl": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"costReportJson": {
+				"type": "String",
+				"defaultValue": "{}"
+			}
+		},
+		"annotations": [
+			"CostReporting",
+			"Agent"
+		]
+	}
+}
